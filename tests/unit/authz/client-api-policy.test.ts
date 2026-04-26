@@ -11,11 +11,16 @@ process.env.API_KEY_SECRET = "test-secret";
 const apiKeysDb = await import("../../../src/lib/db/apiKeys.ts");
 const core = await import("../../../src/lib/db/core.ts");
 
+const ORIGINAL_OMNIROUTE_API_KEY = process.env.OMNIROUTE_API_KEY;
+const ORIGINAL_ROUTER_API_KEY = process.env.ROUTER_API_KEY;
+
 function resetStorage() {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
+  delete process.env.OMNIROUTE_API_KEY;
+  delete process.env.ROUTER_API_KEY;
 }
 
 test.beforeEach(() => {
@@ -24,6 +29,10 @@ test.beforeEach(() => {
 
 test.after(() => {
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  if (ORIGINAL_OMNIROUTE_API_KEY === undefined) delete process.env.OMNIROUTE_API_KEY;
+  else process.env.OMNIROUTE_API_KEY = ORIGINAL_OMNIROUTE_API_KEY;
+  if (ORIGINAL_ROUTER_API_KEY === undefined) delete process.env.ROUTER_API_KEY;
+  else process.env.ROUTER_API_KEY = ORIGINAL_ROUTER_API_KEY;
 });
 
 async function loadPolicy() {
@@ -86,4 +95,18 @@ test("clientApiPolicy: revoked bearer is rejected", async () => {
   const headers = new Headers({ authorization: `Bearer ${created.key}` });
   const out = await policy.evaluate(ctx(headers));
   assert.equal(out.allow, false);
+});
+
+test("clientApiPolicy: environment API key remains accepted for client API routes", async () => {
+  process.env.OMNIROUTE_API_KEY = "sk-env-policy-test";
+
+  const policy = await loadPolicy();
+  const out = await policy.evaluate(
+    ctx(new Headers({ authorization: "Bearer sk-env-policy-test" }))
+  );
+
+  assert.equal(out.allow, true);
+  if (out.allow) {
+    assert.equal(out.subject.kind, "client_api_key");
+  }
 });

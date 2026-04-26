@@ -102,7 +102,9 @@ interface ApiKeyView extends JsonRecord {
 // LRU cache for API key validation (valid keys only)
 const _keyValidationCache = new Map<string, { valid: boolean; timestamp: number }>();
 const _keyMetadataCache = new Map<string, CacheEntry<ApiKeyMetadata>>();
+const _lastUsedUpdateCache = new Map<string, number>();
 const CACHE_TTL = 60 * 1000; // 1 minute TTL
+const LAST_USED_UPDATE_TTL = 5 * 60 * 1000;
 const MAX_CACHE_SIZE = 1000;
 
 // Compiled regex cache for wildcard patterns
@@ -126,10 +128,29 @@ function invalidateCaches() {
   _keyValidationCache.clear();
   _keyMetadataCache.clear();
   _modelPermissionCache.clear();
+  _lastUsedUpdateCache.clear();
 }
 
 function toRecord(value: unknown): JsonRecord {
   return value && typeof value === "object" ? (value as JsonRecord) : {};
+}
+
+function isConfiguredEnvApiKey(key: string): boolean {
+  const envKey = process.env.OMNIROUTE_API_KEY || process.env.ROUTER_API_KEY;
+  return Boolean(envKey && key === envKey);
+}
+
+function markApiKeyUsed(db: ApiKeysDbLike, id: unknown, now: number): void {
+  if (typeof id !== "string" || id.trim() === "") return;
+
+  const lastUpdate = _lastUsedUpdateCache.get(id);
+  if (lastUpdate && now - lastUpdate < LAST_USED_UPDATE_TTL) return;
+
+  db.prepare("UPDATE api_keys SET last_used_at = @lastUsedAt WHERE id = @id").run({
+    id,
+    lastUsedAt: new Date(now).toISOString(),
+  });
+  _lastUsedUpdateCache.set(id, now);
 }
 
 /**
@@ -674,6 +695,8 @@ export async function setApiKeyExpiry(id: string, expiresAt: string | null): Pro
 export async function validateApiKey(key: string | null | undefined) {
   if (!key || typeof key !== "string") return false;
 
+  if (isConfiguredEnvApiKey(key)) return true;
+
   const now = Date.now();
 
   const cached = _keyValidationCache.get(key);
@@ -701,6 +724,7 @@ export async function validateApiKey(key: string | null | undefined) {
 
   evictIfNeeded(_keyValidationCache);
   _keyValidationCache.set(key, { valid: true, timestamp: now });
+  markApiKeyUsed(db, row.id, now);
 
   return true;
 }
@@ -716,8 +740,7 @@ export async function getApiKeyMetadata(
   const now = Date.now();
 
   // persistent env-var key support (persistent passthrough keys) (#1350)
-  const envKey = process.env.OMNIROUTE_API_KEY || process.env.ROUTER_API_KEY;
-  if (envKey && key === envKey) {
+  if (isConfiguredEnvApiKey(key)) {
     return {
       id: "env-key",
       name: "Environment Key",
@@ -885,6 +908,7 @@ function clearPreparedStatementCache() {
  */
 export function clearApiKeyCaches() {
   invalidateCaches();
+  _lastUsedUpdateCache.clear();
   _modelPermissionCache.clear();
   _regexCache.clear();
 }

@@ -11,11 +11,16 @@ process.env.API_KEY_SECRET = "test-secret";
 const core = await import("../../src/lib/db/core.ts");
 const apiKeysDb = await import("../../src/lib/db/apiKeys.ts");
 
+const ORIGINAL_OMNIROUTE_API_KEY = process.env.OMNIROUTE_API_KEY;
+const ORIGINAL_ROUTER_API_KEY = process.env.ROUTER_API_KEY;
+
 function reset() {
   core.resetDbInstance();
   apiKeysDb.resetApiKeyState();
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
   fs.mkdirSync(TEST_DATA_DIR, { recursive: true });
+  delete process.env.OMNIROUTE_API_KEY;
+  delete process.env.ROUTER_API_KEY;
 }
 
 test.beforeEach(() => {
@@ -24,6 +29,10 @@ test.beforeEach(() => {
 
 test.after(() => {
   fs.rmSync(TEST_DATA_DIR, { recursive: true, force: true });
+  if (ORIGINAL_OMNIROUTE_API_KEY === undefined) delete process.env.OMNIROUTE_API_KEY;
+  else process.env.OMNIROUTE_API_KEY = ORIGINAL_OMNIROUTE_API_KEY;
+  if (ORIGINAL_ROUTER_API_KEY === undefined) delete process.env.ROUTER_API_KEY;
+  else process.env.ROUTER_API_KEY = ORIGINAL_ROUTER_API_KEY;
 });
 
 async function makeKey(name = "lifecycle-test", machineId = "machine-lifecycle") {
@@ -88,4 +97,23 @@ test("getApiKeyMetadata exposes lifecycle and policy fields", async () => {
   assert.ok(md!.expiresAt && Date.parse(md!.expiresAt) > Date.now());
   assert.deepEqual(md!.ipAllowlist, []);
   assert.deepEqual(md!.scopes, []);
+});
+
+test("validateApiKey accepts configured environment API keys", async () => {
+  process.env.OMNIROUTE_API_KEY = "sk-env-lifecycle-test";
+  assert.equal(await apiKeysDb.validateApiKey("sk-env-lifecycle-test"), true);
+});
+
+test("validateApiKey updates last_used_at for persisted keys", async () => {
+  const created = await makeKey();
+
+  assert.equal(await apiKeysDb.validateApiKey(created.key), true);
+
+  const db = core.getDbInstance() as {
+    prepare(sql: string): { get(id: string): { last_used_at: string | null } | undefined };
+  };
+  const row = db.prepare("SELECT last_used_at FROM api_keys WHERE id = ?").get(created.id);
+
+  assert.ok(row?.last_used_at, "last_used_at should be set on successful validation");
+  assert.ok(Date.parse(row.last_used_at) > 0, "last_used_at should be an ISO timestamp");
 });
