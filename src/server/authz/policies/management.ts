@@ -1,6 +1,19 @@
-import { isAuthRequired, verifyAuth } from "../../../shared/utils/apiAuth";
+import { isModelSyncInternalRequest } from "../../../shared/services/modelSyncScheduler";
+import { isAuthRequired, isDashboardSessionAuthenticated } from "../../../shared/utils/apiAuth";
 import type { AuthOutcome, PolicyContext, RoutePolicy } from "../context";
 import { allow, reject } from "../context";
+
+const MODEL_SYNC_MANAGEMENT_PATH = /^\/api\/providers\/[^/]+\/(sync-models|models)$/;
+
+function hasBearerToken(headers: Headers): boolean {
+  const authHeader = headers.get("authorization") ?? headers.get("Authorization");
+  return typeof authHeader === "string" && authHeader.trim().toLowerCase().startsWith("bearer ");
+}
+
+function isInternalModelSyncRequest(ctx: PolicyContext): boolean {
+  if (!MODEL_SYNC_MANAGEMENT_PATH.test(ctx.classification.normalizedPath)) return false;
+  return isModelSyncInternalRequest(ctx.request);
+}
 
 export const managementPolicy: RoutePolicy = {
   routeClass: "MANAGEMENT",
@@ -9,12 +22,19 @@ export const managementPolicy: RoutePolicy = {
       return allow({ kind: "anonymous", id: "anonymous", label: "auth-disabled" });
     }
 
-    const error = await verifyAuth(ctx.request);
-    if (error === null) {
+    if (isInternalModelSyncRequest(ctx)) {
+      return allow({ kind: "management_key", id: "model-sync", label: "internal-model-sync" });
+    }
+
+    if (await isDashboardSessionAuthenticated(ctx.request)) {
       return allow({ kind: "dashboard_session", id: "dashboard" });
     }
 
-    const status = error === "Invalid management token" ? 403 : 401;
-    return reject(status, "AUTH_001", error);
+    const bearerPresent = hasBearerToken(ctx.request.headers);
+    return reject(
+      bearerPresent ? 403 : 401,
+      "AUTH_001",
+      bearerPresent ? "Invalid management token" : "Authentication required"
+    );
   },
 };

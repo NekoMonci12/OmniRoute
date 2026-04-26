@@ -11,6 +11,7 @@ process.env.API_KEY_SECRET = "test-secret";
 const core = await import("../../../src/lib/db/core.ts");
 const apiKeysDb = await import("../../../src/lib/db/apiKeys.ts");
 const settingsDb = await import("../../../src/lib/db/settings.ts");
+const modelSync = await import("../../../src/shared/services/modelSyncScheduler.ts");
 
 const ORIGINAL_JWT = process.env.JWT_SECRET;
 const ORIGINAL_INITIAL = process.env.INITIAL_PASSWORD;
@@ -41,13 +42,15 @@ async function loadPolicy() {
   return mod.managementPolicy;
 }
 
-function ctx(headers: Headers, method = "GET") {
+function ctx(headers: Headers, method = "GET", path = "/api/keys") {
   return {
-    request: { method, headers, url: "http://localhost/api/keys" },
+    request: { method, headers, url: `http://localhost${path}`, nextUrl: { pathname: path } },
     classification: {
       routeClass: "MANAGEMENT" as const,
-      reason: "management_api" as const,
-      normalizedPath: "/api/keys",
+      reason: path.startsWith("/dashboard")
+        ? ("dashboard_prefix" as const)
+        : ("management_api" as const),
+      normalizedPath: path,
     },
     requestId: "req_test",
   };
@@ -76,4 +79,43 @@ test("managementPolicy: rejects 401 when auth required and no credentials", asyn
     assert.equal(out.status, 401);
     assert.equal(out.code, "AUTH_001");
   }
+});
+
+test("managementPolicy: rejects client API keys for dashboard access", async () => {
+  process.env.JWT_SECRET = "test-jwt-secret-for-mgmt-policy";
+  process.env.INITIAL_PASSWORD = "initial-pass";
+  await settingsDb.updateSettings({ requireLogin: true });
+  const created = await apiKeysDb.createApiKey("dashboard-denied", "machine-dashboard-denied");
+
+  const policy = await loadPolicy();
+  const out = await policy.evaluate(
+    ctx(new Headers({ authorization: `Bearer ${created.key}` }), "GET", "/dashboard")
+  );
+
+  assert.equal(out.allow, false);
+  if (!out.allow) {
+    assert.equal(out.status, 403);
+    assert.equal(out.code, "AUTH_001");
+  }
+});
+
+test("managementPolicy: allows internal model sync only on the dedicated provider routes", async () => {
+  process.env.JWT_SECRET = "test-jwt-secret-for-mgmt-policy";
+  process.env.INITIAL_PASSWORD = "initial-pass";
+  await settingsDb.updateSettings({ requireLogin: true });
+
+  const policy = await loadPolicy();
+  const internalHeaders = new Headers(modelSync.buildModelSyncInternalHeaders());
+
+  const allowed = await policy.evaluate(
+    ctx(internalHeaders, "POST", "/api/providers/conn-123/sync-models")
+  );
+  assert.equal(allowed.allow, true);
+  if (allowed.allow) {
+    assert.equal(allowed.subject.kind, "management_key");
+    assert.equal(allowed.subject.id, "model-sync");
+  }
+
+  const denied = await policy.evaluate(ctx(internalHeaders, "POST", "/api/keys"));
+  assert.equal(denied.allow, false);
 });
