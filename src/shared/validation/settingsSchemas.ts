@@ -107,4 +107,5 @@ export const updateSettingsSchema = z.object({
   // Missing settings
   lkgpEnabled: z.boolean().optional(),
   backgroundDegradation: z.unknown().optional(),
+  bruteForceProtection: z.boolean().optional(),
 });

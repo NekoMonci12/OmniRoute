@@ -1,4 +1,3 @@
-import { CORS_ORIGIN } from "@/shared/utils/cors";
 import { handleEmbedding } from "@omniroute/open-sse/handlers/embeddings.ts";
 import {
   getProviderCredentials,
@@ -30,7 +29,6 @@ import { getAllCustomModels, getProviderNodes } from "@/lib/localDb";
 export async function OPTIONS() {
   return new Response(null, {
     headers: {
-      "Access-Control-Allow-Origin": CORS_ORIGIN,
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     },

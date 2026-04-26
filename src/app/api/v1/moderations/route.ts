@@ -1,4 +1,3 @@
-import { CORS_ORIGIN } from "@/shared/utils/cors";
 import { handleModeration } from "@omniroute/open-sse/handlers/moderations.ts";
 import { getProviderCredentials, clearRecoveredProviderState } from "@/sse/services/auth";
 import { parseModerationModel } from "@omniroute/open-sse/config/moderationRegistry.ts";
@@ -14,7 +13,6 @@ import { isValidationFailure, validateBody } from "@/shared/validation/helpers";
 export async function OPTIONS() {
   return new Response(null, {
     headers: {
-      "Access-Control-Allow-Origin": CORS_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     },

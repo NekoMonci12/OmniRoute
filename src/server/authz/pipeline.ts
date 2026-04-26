@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { generateRequestId } from "../../shared/utils/requestId";
+import { applyCorsHeaders } from "../cors/origins";
 import { classifyRoute } from "./classify";
 import { clientApiPolicy } from "./policies/clientApi";
 import { managementPolicy } from "./policies/management";
@@ -72,10 +73,19 @@ export async function runAuthzPipeline(
   requestHeaders.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
   requestHeaders.set(AUTHZ_HEADER_REQUEST_ID, requestId);
 
+  if (method === "OPTIONS") {
+    const preflight = new NextResponse(null, { status: 204 });
+    preflight.headers.set(AUTHZ_HEADER_REQUEST_ID, requestId);
+    preflight.headers.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
+    applyCorsHeaders(preflight, request);
+    return preflight;
+  }
+
   if (!options.enforce) {
     const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.headers.set(AUTHZ_HEADER_REQUEST_ID, requestId);
     response.headers.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
+    applyCorsHeaders(response, request);
     return response;
   }
 
@@ -83,7 +93,9 @@ export async function runAuthzPipeline(
   const outcome = await policy.evaluate({ request, classification, requestId });
 
   if (!outcome.allow) {
-    return rejectionResponse(outcome, classification, requestId);
+    const rejection = rejectionResponse(outcome, classification, requestId);
+    applyCorsHeaders(rejection, request);
+    return rejection;
   }
 
   stampSubject(requestHeaders, outcome.subject);
@@ -91,5 +103,6 @@ export async function runAuthzPipeline(
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set(AUTHZ_HEADER_REQUEST_ID, requestId);
   response.headers.set(AUTHZ_HEADER_ROUTE_CLASS, classification.routeClass);
+  applyCorsHeaders(response, request);
   return response;
 }

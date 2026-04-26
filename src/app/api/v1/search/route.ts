@@ -1,4 +1,3 @@
-import { CORS_ORIGIN } from "@/shared/utils/cors";
 import { handleSearch } from "@omniroute/open-sse/handlers/search.ts";
 import { getProviderCredentials, extractApiKey, isValidApiKey } from "@/sse/services/auth";
 import {
@@ -24,7 +23,6 @@ import {
 } from "@omniroute/open-sse/services/searchCache.ts";
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": CORS_ORIGIN,
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "*",
 };

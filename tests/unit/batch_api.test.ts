@@ -732,7 +732,7 @@ test("Files and batches routes expose explicit CORS preflight handlers", async (
     assert.strictEqual(typeof route.OPTIONS, "function");
     const response = await route.OPTIONS();
     assert.strictEqual(response.status, 204);
-    assert.strictEqual(response.headers.get("Access-Control-Allow-Origin"), "*");
+    assert.strictEqual(response.headers.get("Access-Control-Allow-Origin"), null);
     assert.match(
       String(response.headers.get("Access-Control-Allow-Headers") || ""),
       /Authorization/i

@@ -1,4 +1,4 @@
-import { getCorsOrigin } from "../utils/cors.ts";
+import { CORS_HEADERS } from "../utils/cors.ts";
 import { detectFormatFromEndpoint, getTargetFormat } from "../services/provider.ts";
 import { translateRequest, needsTranslation } from "../translator/index.ts";
 import { FORMATS } from "../translator/formats.ts";
@@ -1017,7 +1017,6 @@ export async function handleChatCore({
         status: cachedIdemp.status,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": getCorsOrigin(),
           "X-OmniRoute-Idempotent": "true",
           ...buildOmniRouteResponseMetaHeaders({
             provider,
@@ -1354,7 +1353,6 @@ export async function handleChatCore({
         response: new Response(JSON.stringify(cached), {
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": getCorsOrigin(),
             [OMNIROUTE_RESPONSE_HEADERS.cache]: "HIT",
             ...buildOmniRouteResponseMetaHeaders({
               provider,
@@ -1871,7 +1869,6 @@ export async function handleChatCore({
             status: statusCode,
             headers: {
               "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": getCorsOrigin(),
             },
           }
         ),
@@ -3174,7 +3171,6 @@ export async function handleChatCore({
       response: new Response(JSON.stringify(translatedResponse), {
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": getCorsOrigin(),
           [OMNIROUTE_RESPONSE_HEADERS.cache]: "MISS",
           ...buildOmniRouteResponseMetaHeaders({
             provider,
@@ -3200,7 +3196,6 @@ export async function handleChatCore({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
     Connection: "keep-alive",
-    "Access-Control-Allow-Origin": getCorsOrigin(),
     [OMNIROUTE_RESPONSE_HEADERS.cache]: "MISS",
     ...buildOmniRouteResponseMetaHeaders({
       provider,

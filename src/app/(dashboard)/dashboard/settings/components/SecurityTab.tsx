@@ -184,6 +184,43 @@ export default function SecurityTab() {
           <h3 className="text-lg font-semibold">{t("apiEndpointProtection")}</h3>
         </div>
         <div className="flex flex-col gap-4">
+          <div className="rounded-lg border border-border/50 bg-black/[0.02] dark:bg-white/[0.02] p-3 text-sm text-text-muted">
+            <p className="font-medium text-text">{t("authModelHeading")}</p>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>{t("authModelClient")}</li>
+              <li>{t("authModelManagement")}</li>
+              <li>{t("authModelPublic")}</li>
+            </ul>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">{t("bruteForceProtection")}</p>
+              <p className="text-sm text-text-muted">{t("bruteForceProtectionDesc")}</p>
+            </div>
+            <Toggle
+              checked={settings.bruteForceProtection !== false}
+              onChange={() =>
+                updateSetting("bruteForceProtection", !(settings.bruteForceProtection !== false))
+              }
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <div className="mb-2">
+              <p className="font-medium">{t("corsAllowedOrigins")}</p>
+              <p className="text-sm text-text-muted">{t("corsAllowedOriginsDesc")}</p>
+            </div>
+            <Input
+              type="text"
+              placeholder="https://app.example.com, https://admin.example.com"
+              value={typeof settings.corsOrigins === "string" ? settings.corsOrigins : ""}
+              onChange={(e) => setSettings((prev) => ({ ...prev, corsOrigins: e.target.value }))}
+              onBlur={(e) => updateSetting("corsOrigins", e.target.value.trim())}
+            />
+          </div>
+
           {/* Blocked Providers */}
           <div>
             <div className="mb-3">

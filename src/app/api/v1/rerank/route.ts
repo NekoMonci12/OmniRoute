@@ -1,4 +1,3 @@
-import { CORS_ORIGIN } from "@/shared/utils/cors";
 import { handleRerank } from "@omniroute/open-sse/handlers/rerank.ts";
 import { getProviderCredentials, clearRecoveredProviderState } from "@/sse/services/auth";
 import { parseRerankModel, getRerankProvider } from "@omniroute/open-sse/config/rerankRegistry.ts";
@@ -15,7 +14,6 @@ import { getProviderNodes } from "@/lib/localDb";
 export async function OPTIONS() {
   return new Response(null, {
     headers: {
-      "Access-Control-Allow-Origin": CORS_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "*",
     },
@@ -161,7 +159,7 @@ export async function POST(request) {
 
         const data = await res.json();
         return Response.json(data, {
-          headers: { "Access-Control-Allow-Origin": CORS_ORIGIN },
+          headers: {},
         });
       } catch (err: any) {
         return errorResponse(500, `Rerank request failed: ${err.message}`);

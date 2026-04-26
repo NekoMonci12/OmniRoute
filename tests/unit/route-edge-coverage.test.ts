@@ -660,7 +660,8 @@ test("embeddings route covers options, custom-model listing and defensive POST b
   const validationFailureBody = (await validationFailure.json()) as any;
   const invalidModelBody = (await invalidModel.json()) as any;
 
-  assert.equal(optionsHeaders["access-control-allow-origin"], "*");
+  assert.equal(optionsHeaders["access-control-allow-origin"], undefined);
+  assert.match(optionsHeaders["access-control-allow-methods"] || "", /OPTIONS/);
   assert.equal(getResponse.status, 200);
   assert.equal(
     getBody.data.some((model) => model.id === "custom-embedder/text-embed-1"),
