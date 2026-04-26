@@ -2302,7 +2302,21 @@
     "totalEntries": "Total Entries",
     "tab": "Tab",
     "auditModalSubtitle": "Event details and metadata",
-    "close": "Close"
+    "close": "Close",
+    "runningRequests": "Running Requests",
+    "runningRequestsDesc": "Requests currently in flight across providers.",
+    "activeCount": "{count} active",
+    "model": "Model",
+    "provider": "Provider",
+    "account": "Account",
+    "elapsed": "Elapsed",
+    "count": "Count",
+    "payloads": "Payloads",
+    "viewPayloads": "View Payloads",
+    "runningRequestDetailMeta": "Account: {account} • Elapsed: {elapsed}",
+    "clientPayload": "Client Payload",
+    "upstreamPayload": "Upstream Payload",
+    "upstreamNotSentYet": "Upstream request not sent yet"
   },
   "onboarding": {
     "welcome": "Welcome",
