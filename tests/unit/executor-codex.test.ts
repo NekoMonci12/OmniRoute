@@ -64,7 +64,9 @@ test("Codex helper functions isolate rate-limit scopes and parse quota headers",
   assert.equal(getCodexModelScope("gpt-5.3-codex"), "codex");
   assert.equal(getCodexModelScope("gpt-5.5-xhigh"), "codex");
   assert.equal(getCodexUpstreamModel("gpt-5.5-xhigh"), "gpt-5.5");
+  assert.equal(getCodexUpstreamModel("gpt-5.5-medium"), "gpt-5.5");
   assert.equal(isCodexResponsesWebSocketRequired("gpt-5.5-xhigh", {}), true);
+  assert.equal(isCodexResponsesWebSocketRequired("gpt-5.5-medium", {}), true);
   assert.equal(isCodexResponsesWebSocketRequired("gpt-5.5-mini", {}), false);
   assert.equal(getCodexRateLimitKey("acct-1", "codex-spark-mini"), "acct-1:spark");
   assert.equal(quota.usage5h, 100);
