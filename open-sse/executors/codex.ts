@@ -30,8 +30,10 @@ type WebsocketFn = (url: string, opts?: Record<string, unknown>) => Promise<Wreq
 
 let _websocketFn: WebsocketFn | null = null;
 let _wreqChecked = false;
+let _websocketOverride: WebsocketFn | null | undefined;
 
-function getWreqWebsocket(): WebsocketFn | null {
+function getCodexWebSocketTransport(): WebsocketFn | null {
+  if (_websocketOverride !== undefined) return _websocketOverride;
   if (_wreqChecked) return _websocketFn;
   _wreqChecked = true;
   try {
@@ -41,6 +43,25 @@ function getWreqWebsocket(): WebsocketFn | null {
     _websocketFn = null;
   }
   return _websocketFn;
+}
+
+export function __setCodexWebSocketTransportForTesting(
+  websocket: WebsocketFn | null | undefined
+): void {
+  _websocketOverride = websocket;
+}
+
+function codexWebSocketUnavailableResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: "wreq_unavailable",
+        message:
+          "Codex WebSocket transport unavailable: wreq-js native module is missing for this platform",
+      },
+    }),
+    { status: 503, headers: { "Content-Type": "application/json" } }
+  );
 }
 
 // ─── T09: Codex vs Spark Scope-Aware Rate Limiting ────────────────────────
@@ -638,19 +659,6 @@ export class CodexExecutor extends BaseExecutor {
     const headers = normalizeCodexWsHeaders(this.buildHeaders(input.credentials, true));
     mergeUpstreamExtraHeaders(headers, input.upstreamExtraHeaders);
 
-    const websocket = getCodexWebSocketTransport();
-    if (!websocket) {
-      return {
-        response: errorResponse(
-          503,
-          "Codex WebSocket transport unavailable: wreq-js native module is missing for this platform"
-        ),
-        url,
-        headers,
-        transformedBody: input.body,
-      };
-    }
-
     const transformedBody = (await this.transformRequest(
       input.model,
       input.body,
@@ -666,21 +674,10 @@ export class CodexExecutor extends BaseExecutor {
       ...transformedBody,
     });
 
-    const websocketFn = getWreqWebsocket();
+    const websocketFn = getCodexWebSocketTransport();
     if (!websocketFn) {
       return {
-        response: new Response(
-          JSON.stringify({
-            error: {
-              code: "wreq_unavailable",
-              message:
-                "wreq-js native module not available on this platform. " +
-                "The Codex WebSocket transport requires wreq-js with native binaries. " +
-                "Please reinstall with npm (not pnpm) or use HTTP transport instead.",
-            },
-          }),
-          { status: 503, headers: { "Content-Type": "application/json" } }
-        ),
+        response: codexWebSocketUnavailableResponse(),
         url,
         headers,
         transformedBody,
