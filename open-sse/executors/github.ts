@@ -71,7 +71,9 @@ export class GithubExecutor extends BaseExecutor {
 
     if (Array.isArray(sourceBody.messages)) {
       modifiedBody.messages = sourceBody.messages.map((msg) => {
-        if (!msg || typeof msg !== "object" || msg.role !== "assistant") return msg;
+        if (!msg || typeof msg !== "object") return msg;
+        const role = typeof msg.role === "string" ? msg.role.toLowerCase() : "";
+        if (role !== "assistant") return msg;
         if (msg.reasoning_text === undefined && msg.reasoning_content === undefined) return msg;
         const next = { ...msg };
         delete next.reasoning_text;
@@ -124,9 +126,15 @@ export class GithubExecutor extends BaseExecutor {
     // free, so forwarding the value avoids burning a premium request on every
     // tool-call round-trip.  Fall back to "user" when the header is absent to
     // preserve the existing default behaviour.
-    const clientInitiator = Object.entries(clientHeaders || {}).find(
-      ([key]) => key.toLowerCase() === "x-initiator"
-    )?.[1];
+    let clientInitiator = clientHeaders?.["x-initiator"] || clientHeaders?.["X-Initiator"];
+    if (!clientInitiator && clientHeaders) {
+      for (const key in clientHeaders) {
+        if (key.toLowerCase() === "x-initiator") {
+          clientInitiator = clientHeaders[key];
+          break;
+        }
+      }
+    }
     const initiator =
       clientInitiator === "agent" || clientInitiator === "user" ? clientInitiator : "user";
 

@@ -6,7 +6,7 @@ import { register } from "../registry.ts";
 import { FORMATS } from "../formats.ts";
 import { v4 as uuidv4, v5 as uuidv5 } from "uuid";
 
-function parseToolInput(value) {
+function parseToolInput(value: unknown) {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return value;
   }

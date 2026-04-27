@@ -534,7 +534,7 @@ function parseEventFrame(data: Uint8Array): EventFrame | null {
       offset++;
       if (offset + nameLen > data.length) break;
 
-      const name = TEXT_DECODER.decode(data.slice(offset, offset + nameLen));
+      const name = TEXT_DECODER.decode(data.subarray(offset, offset + nameLen));
       offset += nameLen;
 
       const headerType = data[offset];
@@ -546,7 +546,7 @@ function parseEventFrame(data: Uint8Array): EventFrame | null {
         offset += 2;
         if (offset + valueLen > data.length) break;
 
-        const value = TEXT_DECODER.decode(data.slice(offset, offset + valueLen));
+        const value = TEXT_DECODER.decode(data.subarray(offset, offset + valueLen));
         offset += valueLen;
         headers[name] = value;
       } else {
@@ -560,7 +560,7 @@ function parseEventFrame(data: Uint8Array): EventFrame | null {
 
     let payload: JsonRecord | null = null;
     if (payloadEnd > payloadStart) {
-      const payloadStr = TEXT_DECODER.decode(data.slice(payloadStart, payloadEnd));
+      const payloadStr = TEXT_DECODER.decode(data.subarray(payloadStart, payloadEnd));
 
       // Skip empty or whitespace-only payloads
       if (!payloadStr || !payloadStr.trim()) {
